@@ -1,5 +1,6 @@
 # Git Dead Branch Cleaner
 
+List or delete your merged git branches
 
 ## Installation (Optional)
 ```
