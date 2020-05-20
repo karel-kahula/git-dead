@@ -1,0 +1,68 @@
+#!/bin/bash
+
+scriptName=$(basename $0)
+mainBranch="master"
+toDelete=$''
+branches="$(git for-each-ref --format="%(refname)" refs/heads/ | cut -d/ -f3-)"
+deleteCommand="git branch --delete"
+
+printHelp() {
+    echo "$scriptName - List or delete your merged git branches"
+    echo ""
+    echo "usage:"
+    echo "$scriptName COMMAND"
+    echo ""
+    echo "Commands:"
+    echo "h, -h, --help"
+    echo "	Show this help message"
+    echo "-d, --delete, delete"
+    echo "	Deletes all listed branches"
+}
+
+deleteBranches() {
+    eval $deleteCommand
+}
+
+printDeadBranches() {
+    printf "# Likely safe to remove these branches:"
+    printf "$toDelete\n"
+}
+
+while test $# -gt 0; do
+    case "$1" in
+    h|help|-h|--help)
+        printHelp
+        exit 0
+    ;;
+    -d|--delete|delete)
+        doDelete=true
+        shift
+    ;;
+    *)
+        break
+    ;;
+    esac
+done
+
+for b in $branches; do
+    if [ $b != $mainBranch ]; then
+        {
+            git branch $mainBranch --contains=$(git log --pretty=%h $b -1) | grep "^.*\**.*$(mainBranch)$"
+        } &> /dev/null
+        result=$?
+
+        if [ $result -eq 0 ] ; then
+            toDelete="$toDelete\n#\t- $b"
+            deleteCommand="$deleteCommand $b"
+        fi
+    fi
+done;
+
+if [ ! -z "$toDelete" ] ; then
+    if [ "$doDelete" = true ]; then
+        deleteBranches
+        exit 0
+    fi
+
+    printDeadBranches
+fi
