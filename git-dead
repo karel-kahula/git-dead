@@ -3,8 +3,7 @@
 scriptName=$(basename $0)
 mainBranch="master"
 toDelete=$''
-branches="$(git for-each-ref --format="%(refname)" refs/heads/ | cut -d/ -f3-)"
-deleteCommand="git branch --delete"
+branches=$(git br --merged master | sed 's/[ \*]//' | grep --invert-match $mainBranch)
 
 printHelp() {
     echo "$scriptName - List or delete your merged git branches"
@@ -20,11 +19,11 @@ printHelp() {
 }
 
 deleteBranches() {
-    eval $deleteCommand
+    git branch --delete $branches
 }
 
 printDeadBranches() {
-    printf "# Likely safe to remove these branches:"
+    printf "Likely safe to remove these branches:"
     printf "$toDelete\n"
 }
 
@@ -45,17 +44,7 @@ while test $# -gt 0; do
 done
 
 for b in $branches; do
-    if [ $b != $mainBranch ]; then
-        {
-            git branch $mainBranch --contains=$(git log --pretty=%h $b -1) | grep "^.*\**.*$(mainBranch)$"
-        } &> /dev/null
-        result=$?
-
-        if [ $result -eq 0 ] ; then
-            toDelete="$toDelete\n#\t- $b"
-            deleteCommand="$deleteCommand $b"
-        fi
-    fi
+    toDelete="$toDelete\n\t- $b"
 done;
 
 if [ ! -z "$toDelete" ] ; then
